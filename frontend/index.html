@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Slot Machine</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        :root {
+            --slot-primary: #4f46e5;
+            --slot-secondary: #7c3aed;
+            --slot-accent: #f59e0b;
+            --slot-dark: #1e293b;
+        }
+
+        body {
+            background: radial-gradient(circle at top right, #0f172a, #1e293b);
+        }
+
+        .slot-machine {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                        inset 0 0 20px rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .slot-machine::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #f59e0b, #ec4899, #8b5cf6, #f59e0b);
+            z-index: 20;
+        }
+
+        .reel {
+            background: linear-gradient(145deg, #334155, #1e293b);
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3),
+                        0 5px 15px rgba(0, 0, 0, 0.2);
+            mask-image: linear-gradient(
+                to bottom,
+                transparent 0%,
+                black 10%,
+                black 90%,
+                transparent 100%
+            );
+            -webkit-mask-image: linear-gradient(
+                to bottom,
+                transparent 0%,
+                black 10%,
+                black 90%,
+                transparent 100%
+            );
+        }
+
+        .symbol {
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .winning {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.1); filter: brightness(1.3); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+
+        @keyframes winFlash {
+            0% { background-color: transparent; }
+            50% { background-color: rgba(245, 158, 11, 0.3); }
+            100% { background-color: transparent; }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="game-info text-sm text-white p-3 bg-black bg-opacity-30 rounded-lg max-w-xs">
+      <h2 class="text-lg font-bold mb-2">Информация об игре</h2>
+      <ul class="space-y-1 list-disc list-inside">
+        <li>RTP (возврат игроку): <strong>95%</strong></li>
+        <li>Всего линий выплат: <strong>7</strong></li>
+      </ul>
+
+      <h3 class="font-semibold mt-4 mb-1">Выплаты за символы:</h3>
+      <table class="w-full text-xs text-left border-collapse">
+        <thead>
+          <tr>
+            <th class="pr-2">Символ</th>
+            <th>3</th>
+            <th>4</th>
+            <th>5</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>🍒 Cherry</td><td>2</td><td>5</td><td>10</td></tr>
+          <tr><td>🍋 Lemon</td><td>3</td><td>7</td><td>15</td></tr>
+          <tr><td>🍊 Orange</td><td>4</td><td>9</td><td>20</td></tr>
+          <tr><td>🍑 Plum</td><td>5</td><td>12</td><td>25</td></tr>
+          <tr><td>🔔 Bell</td><td>10</td><td>25</td><td>50</td></tr>
+          <tr><td>💎 Bar</td><td>15</td><td>35</td><td>75</td></tr>
+          <tr><td>🎰 Seven</td><td>50</td><td>100</td><td>200</td></tr>
+        </tbody>
+      </table>
+
+      <p class="mt-4 text-xs opacity-75">
+        Победа засчитывается при 3+ одинаковых символах подряд слева направо по линии. Символы более высокого тира встречаются реже.
+      </p>
+    </div>
+    <div id="slot-machine" class="slot-machine relative p-6 max-w-md w-full mx-4">
+        <div id="win-notification-container" class="absolute top-0 left-1/2 transform -translate-x-1/2 w-auto flex flex-col items-center z-[100]">
+            <div id="win-notification-banner"
+                 class="bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 px-6 py-3 rounded-b-lg shadow-lg font-bold text-lg opacity-0 transform -translate-y-full transition-all duration-500 ease-out min-w-[250px]">
+                 🎉 Выигрыш: <span id="win-amount-banner">0</span>! 🎉
+            </div>
+        </div>
+
+        <h1 class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-amber-200 to-yellow-400 bg-clip-text text-transparent pt-16">Premium Slot</h1>
+
+        <div id="reels-area" class="relative mb-8">
+            <div id="reels" class="flex justify-center gap-2 p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl">
+                <!-- Reels will be generated here -->
+            </div>
+            <svg id="paylines-svg-container" class="absolute top-0 left-0 w-full h-full pointer-events-none z-10"></svg>
+        </div>
+
+        <div class="bet-controls mb-6 bg-slate-800/70 rounded-xl p-3 border border-slate-700/50">
+            <div class="text-lg font-bold text-slate-200 mb-3 text-center">Ставка: <span id="current-bet-display">1</span></div>
+            <div class="flex gap-2 justify-center">
+                <button data-bet="1" class="bet-btn active-bet px-4 py-2 bg-slate-900/60 border border-slate-700 text-slate-200 rounded-lg hover:bg-slate-800 transition-colors">1</button>
+                <button data-bet="5" class="bet-btn px-4 py-2 bg-slate-900/60 border border-slate-700 text-slate-200 rounded-lg hover:bg-slate-800 transition-colors">5</button>
+                <button data-bet="10" class="bet-btn px-4 py-2 bg-slate-900/60 border border-slate-700 text-slate-200 rounded-lg hover:bg-slate-800 transition-colors">10</button>
+            </div>
+        </div>
+
+        <div class="controls flex justify-between items-center mt-6 gap-4">
+            <div class="balance-display text-lg font-bold text-slate-200 bg-slate-800/70 px-4 py-3 rounded-xl border border-slate-700/50 min-w-[180px] text-center">
+                Баланс: <span id="balance">--</span>
+            </div>
+            <button id="spin-button" class="spin-button px-8 py-4 text-xl font-bold text-white rounded-xl cursor-pointer transition-all duration-300 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 active:from-green-700 active:to-emerald-800 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Крутить
+            </button>
+            <label class="text-white text-sm mt-2 flex items-center gap-2">
+              <input type="checkbox" id="autoplay-toggle" class="w-4 h-4">
+              Автоигра
+            </label>
+        </div>
+
+        <div id="error-notification" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg shadow-xl text-lg font-bold z-50">
+            <span id="error-message"></span>
+        </div>
+    </div>
+
+    <script src="js/constants.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/slot.js"></script>
+    <script src="js/soundManager.js"></script>
+</body>
+</html>
